@@ -49,9 +49,7 @@ define Package/$(PKG_NAME)/install
 	fi
 	if [ -d ./target/$(TARGETID)/files/. ]; then \
 		$(CP) ./target/$(TARGETID)/files/* $(1)/; \
-	fi; \
-	$(INSTALL_DIR) $(1)/usr/lib/lua/luci/i18n
-
+	fi
 endef
 
 $(eval $(call BuildPackage,$(PKG_NAME)))
