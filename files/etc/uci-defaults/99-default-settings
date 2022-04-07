@@ -1,154 +1,153 @@
 #!/bin/sh
-
-([ -x /bin/bash ] && ! grep -q "^root.*bash" /etc/passwd) && sed -i "s/^\(root.*\/\)ash/\1bash/g" /etc/passwd
-
-# [[ "$(df | grep overlay)" && ! "$(df | grep /rom/overlay)" ]] && firstboot
+###################################################################
+# default-settings (C) 2021 By Eliminater74                       #
+#                                                                 #
+# Updated On: 09/05/2021                                          #
+###################################################################
+sleep 5
 
 version=`uci -q get base_config.@status[0].version`
 
-. /etc/openwrt_release
-test -n "${DISTRIB_ID}" || DISTRIB_ID=OpenWrt
-DISTRIB_ID=`echo -n $DISTRIB_ID | tr a-z A-Z`
+uci set luci.main.lang=auto
+uci commit luci
+
+uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
+uci commit luci
+
+uci set fstab.@global[0].anon_mount=1
+uci commit fstab
+
+uci -q set upnpd.config.enabled='1'
+uci commit upnpd
+
+uci -q batch <<-EOF
+uci set system.@system[0].timezone=UTC
+uci set system.@system[0].zonename=America/New York
+delete system.ntp.server
+add_list system.ntp.server='0.us.pool.ntp.org'
+add_list system.ntp.server='1.us.pool.ntp.org'
+add_list system.ntp.server='2.us.pool.ntp.org'
+add_list system.ntp.server='3.us.pool.ntp.org'
+EOF
+uci commit system
+
+uci -q batch <<-EOF
+set dhcp.@dnsmasq[0].cachesize='1500'
+set dhcp.@dnsmasq[0].min_ttl='3600'
+set dhcp.@dnsmasq[0].filter_aaaa='0'
+set dhcp.@dnsmasq[0].localservice='0'
+set dhcp.@dnsmasq[0].nonwildcard='0'
+set dhcp.lan.ndp=''
+set dhcp.lan.ra='hybrid'
+set dhcp.lan.dhcpv6='hybrid'
+set dhcp.lan.ignore='0'
+set dhcp.lan.ra_management='1'
+set dhcp.lan.ra_default='1'
+set dhcp.lan.force='1'
+EOF
+uci commit dhcp
+
+uci -q batch <<-EOF
+set network.@globals[0].ula_prefix=''
+set network.lan.delegate='0'
+set network.wan.mtu=1460
+set network.wan.metric='41'
+set network.wan.delegate='0'
+set network.wan.ipv6='auto'
+EOF
+uci commit network
 
 if [ "$(uci -q get dhcp.@dnsmasq[0].port)" != "53" ]; then
 	uci -q set dhcp.@dnsmasq[0].port='53'
 	uci commit dhcp
 fi
 
-uci -q batch <<EOF
-set attendedsysupgrade.server.url='https://op.supes.top'
-commit attendedsysupgrade
-EOF
-
-uci set dockerd.firewall.extra_iptables_args='--match conntrack ! --ctstate RELATED,ESTABLISHED'
-uci commit dockerd
-
-sed -i '/profile.d/d' /lib/upgrade/keep.d/base-files
-
-echo $(uci -q get uhttpd.main.index_page) | grep -q "cgi-bin/luci" ||
+echo "$(uci -q get uhttpd.main.index_page)" | grep -q "cgi-bin/luci" ||
 	uci -q add_list uhttpd.main.index_page='cgi-bin/luci' && uci commit uhttpd
 
 /etc/init.d/wizard disable
 
-[ -f /usr/bin/wget ] && 	
-	ln -s /usr/bin/wget /usr/bin/wget-ssl
-
 sed -i "s/git-.*-\(.*\)/git-\1/g" /usr/lib/lua/luci/version.lua
 
-[[ "$(echo "$(/sbin/cpuinfo 2>/dev/null)" | grep -i "MHz")" ]] || sed -i "s/_('CPU Info'),cpuinfo.cpufreq,//" /www/luci-static/resources/view/status/include/10_system.js
+[ "$(echo "$(/sbin/cpuinfo 2>/dev/null)" | grep -i "MHz")" ] || sed -i "s/_('CPU Info'),cpuinfo.cpufreq,//" /www/luci-static/resources/view/status/include/10_system.js
 
-grep -q op.supes.top /etc/bypass/white.list ||
-		echo "op.dllkids.xyz" >> /etc/bypass/white.list
 
-processor=`cat /proc/cpuinfo | grep 'processor' | wc -l`
-test -n "$processor" || processor=3
-sed -i "/^threads =/c\threads = $processor" /etc/uwsgi/vassals/luci-webui.ini
-test $version -lt 1 && {
-	uci -q set luci.main.lang='auto'
-	uci -q set luci.main.mediaurlbase=/luci-static/edge
-	uci commit luci
-	
-	uci -q set dropbear.@dropbear[0].Interface='lan'
-	uci commit dropbear
-	
-	uci -q get system.@system[0] >/dev/null 2>&1 && {
-		uci -q set system.@system[0].hostname="${DISTRIB_ID}"
-		uci -q set system.@system[0].zonename='Asia/Shanghai'
-		uci -q set system.@system[0].timezone='CST-8'
-		uci -q del system.ntp.server
-		uci -q add_list system.ntp.server='ntp.aliyun.com'
-		uci -q add_list system.ntp.server='0.openwrt.pool.ntp.org'
-		uci commit system
-	}
+rm -f /usr/lib/lua/luci/view/admin_status/index/ddns.htm
+rm -f /usr/lib/lua/luci/view/admin_status/index/minidlna.htm
+rm -f /usr/lib/lua/luci/view/admin_status/index/mwan.htm
+rm -f /usr/lib/lua/luci/view/admin_status/index/upnp.htm
 
-	uci -q set uhttpd.main.rfc1918_filter=0
-	uci -q set uhttpd.main.redirect_https=0
-	uci -q set uhttpd.main.script_timeout='120'
-	uci commit uhttpd
-	
-	(echo "root"; sleep 1; echo "root") | /bin/busybox passwd root >/dev/null 2>&1 &
-	
-	wifi_setup_radio(){
-	local radio=$1
-	uci -q get wireless.${radio} >/dev/null 2>&1 && {
-		uci -q batch <<-EOT
-			set -q wireless.${radio}.disabled='0'
-		EOT
-		
-		if [ "$(uci -q get wireless.${radio}.hwmode)" = "11a" ]; then
-			uci -q set wireless.${radio}.htmode='VHT80'
-		else
-			uci -q set wireless.${radio}.htmode='VHT40'
-		fi
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/aria2.lua
+# sed -i 's/services/nas/g' /usr/lib/lua/luci/view/aria2/overview_status.htm
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/hd_idle.lua
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/samba.lua
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/minidlna.lua
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/transmission.lua
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/mjpg-streamer.lua
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/p910nd.lua
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/usb_printer.lua
+# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/xunlei.lua
+# sed -i 's/services/nas/g'  /usr/lib/lua/luci/view/minidlna_status.htm
 
-		obj=`uci -q add wireless wifi-iface`
-		test -n "$obj" && {
-			uci -q set wireless.$obj.device="${radio}"
-			uci -q set wireless.$obj.network='lan'
-			uci -q set wireless.$obj.mode='ap'
-			if [ "$(uci -q get wireless.${radio}.hwmode)" == "11a" ]; then
-				uci -q set wireless.$obj.ssid="${SSID}_5G"
-			else
-				uci -q set wireless.$obj.ssid="${SSID}_2.4G"
-			fi
-			if [ "${SSID_PASSWD}" ]; then
-				uci -q set wireless.$obj.encryption='psk2'
-				uci -q set wireless.$obj.key="${SSID_PASSWD}"
-			else
-				uci -q set wireless.$obj.encryption='none'
-			fi
-			}
-		}
-	}
+sleep 50
+MAGIC=$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")
+echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$MAGIC" >> /etc/opkg/distfeeds.conf
 
-	[ -f /etc/config/wireless ] && {
-		SSID=${DISTRIB_ID}
-		SSID_PASSWD=""
-		while uci delete wireless.@wifi-iface[0] >/dev/null 2>&1; do :; done
-		for radio in radio0 radio1 radio2 radio3 wifi0 wifi1 wifi2 wifi3; do
-			wifi_setup_radio ${radio}
-		done
-		uci commit wireless
-	}
-	
-	uci -q set upnpd.config.enabled='1'
-	uci commit upnpd
-	
-	grep -q log-facility /etc/dnsmasq.conf ||
-		echo "log-facility=/dev/null" >> /etc/dnsmasq.conf
 
-	grep -q /etc/dnsmasq.d /etc/dnsmasq.conf ||
-		echo "conf-dir=/etc/dnsmasq.d" >> /etc/dnsmasq.conf
+#echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")" >> /etc/opkg/distfeeds.conf
+echo 'src/gz purefusion_packages https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/packages' >> /etc/opkg/distfeeds.conf
+echo 'src/gz purefusion_base https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/base' >> /etc/opkg/distfeeds.conf
+echo 'src/gz purefusion_luci https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/luci' >> /etc/opkg/distfeeds.conf
+echo 'src/gz purefusion_routing https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/routing' >> /etc/opkg/distfeeds.conf
+echo 'src/gz purefusion_telephony https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/telephony' >> /etc/opkg/distfeeds.conf
+sed -i '/tomato/d' /etc/opkg/distfeeds.conf
 
-	uci -q set firewall.@defaults[0].fullcone='1'
-	uci commit firewall
+ln -sf /sbin/ip /usr/bin/ip
 
-	uci -q set fstab.@global[0].anon_mount=1
-	uci commit fstab
- 
-	uci -q set network.lan.ipaddr="192.168.1.252"
-	uci -q set network.@globals[0].packet_steering=1
-	uci commit network
-  
-	uci -q set dhcp.@dnsmasq[0].dns_redirect='1'
-	uci -q set dhcp.@dnsmasq[0].allservers='1'
-	uci -q del dhcp.@dnsmasq[0].noresolv
-	uci -q set dhcp.@dnsmasq[0].cachesize='1500'
-	uci -q set dhcp.@dnsmasq[0].min_ttl='3600'
-	uci -q set dhcp.lan.force='1'
-	uci -q set dhcp.lan.ra='hybrid'
-	uci -q set dhcp.lan.ndp='hybrid'
-	uci -q set dhcp.lan.dhcpv6='hybrid'
-	uci -q set dhcp.lan.force='1'
-	uci commit dhcp
+### ---------------------------------------------------------------------------------------------------------- ###
+##### SPECIAL MODIFICATIONS #####
+##### --------------------- #####
+###  Modify the host name, the OpenWrt-123 modifications you like on the line (not pure digital or use Chinese)
+# sed -i '/uci commit system/i\uci set system.@system[0].hostname='OpenWrt-123''
 
-	uci -q set nft-qos.default.limit_enable='0'
-	uci commit nft-qos
+### Modify the version number
+# sed -i "s/OpenWrt /PureFusion build $(TZ=UTC-8 date "+%Y.%m.%d") @ OpenWrt /g"
 
-	uci -q set system.@system[0].conloglevel='4'
-	uci -q set system.@system[0].cronloglevel='8'
-	uci commit system
-}
+###  The version number is displayed in its own name (281.67716 million  Build  $ (TZ = UTC-8  DATE  "+% Y.% m.% D")  @  These are the increase of)
+# sed -i "s/OpenWrt /Compiled By Liukai On $(TZ=UTC-8 date "+%Y.%m.%d") @ OpenWrt /g"
+
+### Set the  password to be empty (you do not need a password to log in when installing the firmware, and then modify the password you want)
+# sed -i 's@.*CYXluq4wUazHjmCDBCqXF*@#&@g'
+
+### Delete the default password
+# sed -i "/CYXluq4wUazHjmCDBCqXF/d"
+
+### ---------------------------------------------------------------------------------------------------------- ###
+
+#sed -i 's#downloads.openwrt.org#mirrors.cloud.tencent.com/lede#g' /etc/opkg/distfeeds.conf
+#sed -i 's/root::0:0:99999:7:::/root:$1$V4UetPzk$CYXluq4wUazHjmCDBCqXF.:0:0:99999:7:::/g' /etc/shadow
+
+sed -i "s/# //g" /etc/opkg/distfeeds.conf
+# sed -i '/openwrt_luci/ { s/snapshots/releases\/18.06.9/g; }'  /etc/opkg/distfeeds.conf
+
+sed -i '/REDIRECT --to-ports 53/d' /etc/firewall.user
+echo 'iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
+echo 'iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
+#echo '[ -n "$(command -v ip6tables)" ] && ip6tables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
+#echo '[ -n "$(command -v ip6tables)" ] && ip6tables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
+
+## Lets Keep Wireless Enabled
+sed -i '/option disabled/d' /etc/config/wireless
+sed -i '/set wireless.radio${devidx}.disabled/d' /lib/wifi/mac80211.sh
+wifi up
+
+# sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
+# echo "DISTRIB_REVISION='R21.8.6'" >> /etc/openwrt_release
+# sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
+# echo "DISTRIB_DESCRIPTION='OpenWrt '" >> /etc/openwrt_release
+
+sed -i '/log-facility/d' /etc/dnsmasq.conf
+echo "log-facility=/dev/null" >> /etc/dnsmasq.conf
 
 # kB
 memtotal=`grep MemTotal /proc/meminfo | awk '{print $2}'`
@@ -202,7 +201,7 @@ test $version -lt 1 && {
 # sysctl overwrite
 SYSCTL_LOCAL=/etc/sysctl.d/50-local.conf
 mkdir -p /etc/sysctl.d
-echo -n >$SYSCTL_LOCAL
+printf >$SYSCTL_LOCAL
 echo net.nf_conntrack_max=$nf_conntrack_max >>$SYSCTL_LOCAL
 echo net.ipv4.ip_early_demux=0 >>$SYSCTL_LOCAL
 echo net.bridge.bridge-nf-call-iptables=0 >>$SYSCTL_LOCAL
@@ -213,8 +212,12 @@ echo kernel.msgmax = 65536 >>$SYSCTL_LOCAL
 echo kernel.msgmnb = 65536 >>$SYSCTL_LOCAL
 echo vm.swappiness=0 >>$SYSCTL_LOCAL
 
+echo 'hsts=0' > /root/.wgetrc
+
 cp -pR /www/cgi-bin/* /www/
 rm -rf /tmp/luci-*
 
 uci -q set base_config.@status[0].version=$version
 uci commit base_config
+
+exit 0
