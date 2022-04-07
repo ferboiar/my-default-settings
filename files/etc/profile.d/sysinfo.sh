@@ -103,17 +103,17 @@ done
 ip_address="$(get_ip_addresses)"
 
 # display info
-display "系统负载" "${load%% *}" "${critical_load}" "0" "" "${load#* }"
-printf "运行时间:  \x1B[92m%s\x1B[0m\t\t" "$time"
+display "System Load" "${load%% *}" "${critical_load}" "0" "" "${load#* }"
+printf "Run time: \x1B[92m%s\x1B[0m\t\t" "$time"
 echo "" # fixed newline
 
 
-display "内存已用" "$memory_usage" "70" "0" " %" " of ${memory_total}MB"
-display "交换内存" "$swap_usage" "10" "0" " %" " of $swap_total""Mb"
-printf "IP  地址:  \x1B[92m%s\x1B[0m" "$ip_address"
+display "Memory used" "$memory_usage" "70" "0" " %" " of ${memory_total}MB"
+display "swap memory" "$swap_usage" "10" "0" " %" " of $swap_total" "Mb"
+printf "IP address: \x1B[92m%s\x1B[0m" "$ip_address"
 echo "" # fixed newline
 
-display "系统存储" "$root_usage" "90" "1" "%" " of $root_total"
-printf "CPU 信息: \x1B[92m%s\x1B[0m\t" "$(echo `/sbin/cpuinfo | cut -d '(' -f -1`)"
+display "system storage" "$root_usage" "90" "1" "%" " of $root_total"
+printf "CPU info: \x1B[92m%s\x1B[0m\t" "$(echo `/sbin/cpuinfo | cut -d '(' -f -1`)"
 echo ""
 echo ""
