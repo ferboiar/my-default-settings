@@ -4,7 +4,6 @@
 #                                                                 #
 # Updated On: 09/05/2021                                          #
 ###################################################################
-sleep 5
 
 version=`uci -q get base_config.@status[0].version`
 
@@ -89,7 +88,6 @@ rm -f /usr/lib/lua/luci/view/admin_status/index/upnp.htm
 # sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/xunlei.lua
 # sed -i 's/services/nas/g'  /usr/lib/lua/luci/view/minidlna_status.htm
 
-sleep 50
 MAGIC=$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")
 echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$MAGIC" >> /etc/opkg/distfeeds.conf
 
