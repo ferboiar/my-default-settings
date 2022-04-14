@@ -1,0 +1,9 @@
+#!/bin/ash
+# shellcheck shell=dash
+
+sleep 50
+
+MAGIC=$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")
+echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$MAGIC" >> /etc/opkg/distfeeds.conf
+
+exit 0
