@@ -5,7 +5,7 @@
 # Updated On: 09/05/2021                                          #
 ###################################################################
 
-version=`uci -q get base_config.@status[0].version`
+version=$(uci -q get base_config.@status[0].version)
 
 uci set luci.main.lang=auto
 uci commit luci
@@ -148,28 +148,28 @@ sed -i '/log-facility/d' /etc/dnsmasq.conf
 echo "log-facility=/dev/null" >> /etc/dnsmasq.conf
 
 # kB
-memtotal=`grep MemTotal /proc/meminfo | awk '{print $2}'`
-if test $memtotal -ge 1048576; then
+memtotal=$(grep MemTotal /proc/meminfo | awk '{print $2}')
+if test "$memtotal" -ge 1048576; then
 	# > 1024M
 	cachesize=10000
 	dnsforwardmax=10000
 	nf_conntrack_max=262144
-elif test $memtotal -ge 524288; then
+elif test "$memtotal" -ge 524288; then
 	# <= 1024M
 	cachesize=10000
 	dnsforwardmax=10000
 	nf_conntrack_max=131072
-elif test $memtotal -ge 262144; then
+elif test "$memtotal" -ge 262144; then
 	# <= 512M
 	cachesize=8192
 	dnsforwardmax=8192
 	nf_conntrack_max=65536
-elif test $memtotal -ge 131072; then
+elif test "$memtotal" -ge 131072; then
 	# <= 256M
 	cachesize=4096
 	dnsforwardmax=4096
 	nf_conntrack_max=65536
-elif test $memtotal -ge 65536; then
+elif test "$memtotal" -ge 65536; then
 	# <= 128M
 	cachesize=2048
 	dnsforwardmax=2048
@@ -181,7 +181,7 @@ else
 	nf_conntrack_max=16384
 fi
 
-test $version -lt 1 && {
+test "$version" -lt 1 && {
 	uci -q get dhcp.@dnsmasq[0] || uci -q add dhcp dnsmasq
 	uci -q set dhcp.@dnsmasq[0].cachesize="$cachesize"
 	uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
@@ -191,7 +191,7 @@ test $version -lt 1 && {
 	uci -q set dhcp.@dnsmasq[0].rebind_localhost='1'
 	uci commit dhcp
 	uci -q set system.@system[0].zram_comp_algo='zstd'
-	uci -q set system.@system[0].zram_size_mb="$(expr $memtotal / 1024 / 3)"
+	uci -q set system.@system[0].zram_size_mb="$(expr "$memtotal" / 1024 / 3)"
 	uci commit system
 	version=1
 }
