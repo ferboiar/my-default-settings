@@ -40,10 +40,10 @@ function get_ip_addresses()
 {
 	local ips=()
 	for f in /sys/class/net/*; do
-		local intf=$(basename $f)
+		local intf=$(basename "$f")
 		# match only interface names starting with e (Ethernet), br (bridge), w (wireless), r (some Ralink drivers use ra<number> format)
 		if [[ $intf =~ $SHOW_IP_PATTERN ]]; then
-			local tmp=$(ip -4 addr show dev $intf | awk '/inet/ {print $2}' | cut -d'/' -f1)
+			local tmp=$(ip -4 addr show dev "$intf" | awk '/inet/ {print $2}' | cut -d'/' -f1)
 			# add both name and IP - can be informative but becomes ugly with long persistent/predictable device names
 			#[[ -n $tmp ]] && ips+=("$intf: $tmp")
 			# add IP only
@@ -58,8 +58,8 @@ function storage_info()
 {
 	# storage info
 	RootInfo=$(df -h /)
-	root_usage=$(awk '/\// {print $(NF-1)}' <<<${RootInfo} | sed 's/%//g')
-	root_total=$(awk '/\// {print $(NF-4)}' <<<${RootInfo})
+	root_usage=$(awk '/\// {print $(NF-1)}' <<<"$RootInfo" | sed 's/%//g')
+	root_total=$(awk '/\// {print $(NF-4)}' <<<"$RootInfo")
 } # storage_info
 
 
@@ -70,40 +70,40 @@ critical_load=$(( 1 + $(grep -c processor /proc/cpuinfo) / 2 ))
 
 # get uptime, logged in users and load in one take
 UptimeString=$(uptime | tr -d ',')
-time=$(awk -F" " '{print $3" "$4}' <<<"${UptimeString}")
-load="$(awk -F"average: " '{print $2}'<<<"${UptimeString}")"
-case ${time} in
+time=$(awk -F" " '{print $3" "$4}' <<<"$UptimeString")
+load="$(awk -F"average: " '{print $2}'<<<"$UptimeString")"
+case $time in
 	1:*) # 1-2 hours
-		time=$(awk -F" " '{print $3" 小时"}' <<<"${UptimeString}")
+		time=$(awk -F" " '{print $3" 小时"}' <<<"$UptimeString")
 		;;
 	*:*) # 2-24 hours
-		time=$(awk -F" " '{print $3" 小时"}' <<<"${UptimeString}")
+		time=$(awk -F" " '{print $3" 小时"}' <<<"$UptimeString")
 		;;
 	*day) # days
-		days=$(awk -F" " '{print $3"天"}' <<<"${UptimeString}")
-		time=$(awk -F" " '{print $5}' <<<"${UptimeString}")
-		time="$days "$(awk -F":" '{print $1"小时 "$2"分钟"}' <<<"${time}")
+		days=$(awk -F" " '{print $3"天"}' <<<"$UptimeString")
+		time=$(awk -F" " '{print $5}' <<<"$UptimeString")
+		time="$days "$(awk -F":" '{print $1"小时 "$2"分钟"}' <<<"$time")
 		;;
 esac
 
 
 # memory and swap
 mem_info=$(LC_ALL=C free -w 2>/dev/null | grep "^Mem" || LC_ALL=C free | grep "^Mem")
-memory_usage=$(awk '{printf("%.0f",(($2-($4+$6))/$2) * 100)}' <<<${mem_info})
-memory_total=$(awk '{printf("%d",$2/1024)}' <<<${mem_info})
+memory_usage=$(awk '{printf("%.0f",(($2-($4+$6))/$2) * 100)}' <<<"$mem_info")
+memory_total=$(awk '{printf("%d",$2/1024)}' <<<"$mem_info")
 swap_info=$(LC_ALL=C free -m | grep "^Swap")
-swap_usage=$( (awk '/Swap/ { printf("%3.0f", $3/$2*100) }' <<<${swap_info} 2>/dev/null || echo 0) | tr -c -d '[:digit:]')
-swap_total=$(awk '{print $(2)}' <<<${swap_info})
+swap_usage=$( (awk '/Swap/ { printf("%3.0f", $3/$2*100) }' <<<"$swap_info" 2>/dev/null || echo 0) | tr -c -d '[:digit:]')
+swap_total=$(awk '{print $(2)}' <<<"$swap_info")
 
 c=0
 while [ ! -n "$(get_ip_addresses)" ];do
-[ $c -eq 10 ] && break || let c++
+[ "$c" -eq 10 ] && break || let c++
 sleep 1
 done
 ip_address="$(get_ip_addresses)"
 
 # display info
-display "System Load" "${load%% *}" "${critical_load}" "0" "" "${load#* }"
+display "System Load" "${load%% *}" "$critical_load" "0" "" "${load#* }"
 printf "Run time: \x1B[92m%s\x1B[0m\t\t" "$time"
 echo "" # fixed newline
 
@@ -114,6 +114,6 @@ printf "IP address: \x1B[92m%s\x1B[0m" "$ip_address"
 echo "" # fixed newline
 
 display "system storage" "$root_usage" "90" "1" "%" " of $root_total"
-printf "CPU info: \x1B[92m%s\x1B[0m\t" "$(echo `/sbin/cpuinfo | cut -d '(' -f -1`)"
+printf "CPU info: \x1B[92m%s\x1B[0m\t" "$(echo "$(/sbin/cpuinfo | cut -d '(' -f -1)")"
 echo ""
 echo ""
