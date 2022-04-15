@@ -215,4 +215,6 @@ rm -rf /tmp/luci-*
 uci -q set base_config.@status[0].version=$version
 uci commit base_config
 
+/etc/init.d/kmods
+
 exit 0
