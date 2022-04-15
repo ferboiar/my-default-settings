@@ -35,7 +35,7 @@ define Package/$(PKG_NAME)/conffiles
 endef
 
 define Build/Prepare
-	chmod -R +x ./files/bin ./files/sbin ./files/etc/profile.d ./files/etc/rc.d ./files/usr/share target/*/{*,}/files/{etc/init.d,usr/bin} >/dev/null || true
+	chmod -R +x ./files/bin ./files/sbin ./files/etc/profile.d ./files/etc/rc.d ./files/etc/init.d ./files/usr/share target/*/{*,}/files/{etc/init.d,usr/bin} >/dev/null || true
 endef
 
 define Build/Compile
