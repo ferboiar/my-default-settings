@@ -22,7 +22,7 @@ function display()
 	else
 		local great=">";
 	fi
-	if [[ -n "$2" && "$2" -gt "0" && ( "${2%.*}" -ge "$4" ) ]]; then
+	if [ -n "$2" ] && [ "$2" -gt "0" ] && { [ "${2%.*}" -ge "$4" ]; }; then
 		printf "%-14s%s" "$1:"
 		if awk "BEGIN{exit ! ($2 $great $3)}"; then
 			echo -ne "\e[0;91m $2";
@@ -40,10 +40,12 @@ function get_ip_addresses()
 {
 	local ips=()
 	for f in /sys/class/net/*; do
-		local intf=$(basename "$f")
+		intf=$(basename "$f")
+		local "$intf"
 		# match only interface names starting with e (Ethernet), br (bridge), w (wireless), r (some Ralink drivers use ra<number> format)
 		if [[ $intf =~ $SHOW_IP_PATTERN ]]; then
-			local tmp=$(ip -4 addr show dev "$intf" | awk '/inet/ {print $2}' | cut -d'/' -f1)
+			tmp=$(ip -4 addr show dev "$intf" | awk '/inet/ {print $2}' | cut -d'/' -f1)
+			local "$tmp"
 			# add both name and IP - can be informative but becomes ugly with long persistent/predictable device names
 			#[[ -n $tmp ]] && ips+=("$intf: $tmp")
 			# add IP only
