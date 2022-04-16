@@ -196,23 +196,23 @@ test "$version" -lt 1 && {
 # sysctl overwrite
 SYSCTL_LOCAL=/etc/sysctl.d/50-local.conf
 mkdir -p /etc/sysctl.d
-printf >$SYSCTL_LOCAL
-echo net.nf_conntrack_max=$nf_conntrack_max >>$SYSCTL_LOCAL
-echo net.ipv4.ip_early_demux=0 >>$SYSCTL_LOCAL
-echo net.bridge.bridge-nf-call-iptables=0 >>$SYSCTL_LOCAL
-echo net.ipv4.fib_multipath_hash_policy=1 >>$SYSCTL_LOCAL
-echo net.ipv4.tcp_congestion_control=cubic >>$SYSCTL_LOCAL
-echo net.netfilter.nf_conntrack_helper=1 >>$SYSCTL_LOCAL
-echo kernel.msgmax = 65536 >>$SYSCTL_LOCAL
-echo kernel.msgmnb = 65536 >>$SYSCTL_LOCAL
-echo vm.swappiness=0 >>$SYSCTL_LOCAL
+printf >"$SYSCTL_LOCAL"
+echo net.nf_conntrack_max="$nf_conntrack_max" >>"$SYSCTL_LOCAL"
+echo net.ipv4.ip_early_demux=0 >>"$SYSCTL_LOCAL"
+echo net.bridge.bridge-nf-call-iptables=0 >>"$SYSCTL_LOCAL"
+echo net.ipv4.fib_multipath_hash_policy=1 >>"$SYSCTL_LOCAL"
+echo net.ipv4.tcp_congestion_control=cubic >>"$SYSCTL_LOCAL"
+echo net.netfilter.nf_conntrack_helper=1 >>"$SYSCTL_LOCAL"
+echo kernel.msgmax = 65536 >>"$SYSCTL_LOCAL"
+echo kernel.msgmnb = 65536 >>"$SYSCTL_LOCAL"
+echo vm.swappiness=0 >>"$SYSCTL_LOCAL"
 
 echo 'hsts=0' > /root/.wgetrc
 
 cp -pR /www/cgi-bin/* /www/
 rm -rf /tmp/luci-*
 
-uci -q set base_config.@status[0].version=$version
+uci -q set base_config.@status[0].version="$version"
 uci commit base_config
 
 exit 0
