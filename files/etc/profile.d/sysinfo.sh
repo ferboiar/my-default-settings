@@ -22,7 +22,7 @@ function display()
 	else
 		local great=">";
 	fi
-	if [[ -n "$2" && "$2" > "0" && (( "${2%.*}" -ge "$4" )) ]]; then
+	if [[ -n "$2" && "$2" -gt "0" && ( "${2%.*}" -ge "$4" ) ]]; then
 		printf "%-14s%s" "$1:"
 		if awk "BEGIN{exit ! ($2 $great $3)}"; then
 			echo -ne "\e[0;91m $2";
