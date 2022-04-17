@@ -117,6 +117,9 @@ sed -i "s/OpenWrt /Compiled By Eliminater74 On $(TZ=UTC-8 date "+%m.%d.%Y") @ Op
 ### Delete the default password
 # sed -i "/CYXluq4wUazHjmCDBCqXF/d"
 
+### Change /etc/profile to allow running scripts as bash
+sed 's/./bash/' /etc/profile
+
 ### ---------------------------------------------------------------------------------------------------------- ###
 
 #sed -i 's#downloads.openwrt.org#mirrors.cloud.tencent.com/lede#g' /etc/opkg/distfeeds.conf
