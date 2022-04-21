@@ -30,6 +30,7 @@ add_list system.ntp.server='3.us.pool.ntp.org'
 EOF
 uci commit system
 
+# dnsmasq
 uci -q batch <<-EOF
 set dhcp.@dnsmasq[0].cachesize='1500'
 set dhcp.@dnsmasq[0].min_ttl='3600'
@@ -38,13 +39,18 @@ set dhcp.@dnsmasq[0].localservice='0'
 set dhcp.@dnsmasq[0].nonwildcard='0'
 set dhcp.lan.ndp=''
 set dhcp.lan.ra='hybrid'
+set dhcp.lan.ndp='hybrid'
 set dhcp.lan.dhcpv6='hybrid'
 set dhcp.lan.ignore='0'
 set dhcp.lan.ra_management='1'
 set dhcp.lan.ra_default='1'
 set dhcp.lan.force='1'
+del dhcp.@dnsmasq[0].rebind_protection='1'
 EOF
 uci commit dhcp
+sed -i '/log-facility/d' /etc/dnsmasq.conf
+echo "log-facility=/dev/null" >> /etc/dnsmasq.conf
+
 
 uci -q batch <<-EOF
 set network.@globals[0].ula_prefix=''
