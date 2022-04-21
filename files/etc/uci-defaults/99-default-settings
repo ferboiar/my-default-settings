@@ -234,6 +234,15 @@ cp -pR /www/cgi-bin/* /www/
 uci -q set base_config.@status[0].version="$version"
 uci commit base_config
 
+# disable coremark
+sed -i '/coremark/d' /etc/crontabs/root
+crontab /etc/crontabs/root
+
+# disable linkease
+uci set linkease.@linkease[0].enabled='0'
+uci commit linkease
+/etc/init.d/linkease restart
+
 # link
 ln -sf /bin/busybox /bin/top
 
