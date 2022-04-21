@@ -62,6 +62,9 @@ set network.wan.ipv6='auto'
 EOF
 uci commit network
 
+# opkg mirror
+sed -i 's,downloads.openwrt.org,mirror.sjtu.edu.cn/openwrt,g' /etc/opkg/distfeeds.conf
+
 # log level
 uci set system.@system[0].conloglevel='7'
 uci set system.@system[0].cronloglevel='8'
