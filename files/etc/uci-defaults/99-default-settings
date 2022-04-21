@@ -56,6 +56,11 @@ set network.wan.ipv6='auto'
 EOF
 uci commit network
 
+# log level
+uci set system.@system[0].conloglevel='7'
+uci set system.@system[0].cronloglevel='8'
+uci commit system
+
 if [ "$(uci -q get dhcp.@dnsmasq[0].port)" != "53" ]; then
 	uci -q set dhcp.@dnsmasq[0].port='53'
 	uci commit dhcp
