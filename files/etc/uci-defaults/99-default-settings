@@ -234,4 +234,8 @@ rm -rf /tmp/luci-*
 uci -q set base_config.@status[0].version="$version"
 uci commit base_config
 
+# link
+ln -sf /bin/busybox /bin/top
+
+
 exit 0
