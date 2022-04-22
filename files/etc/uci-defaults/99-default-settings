@@ -63,7 +63,7 @@ EOF
 uci commit network
 
 # opkg mirror
-sed -i 's,downloads.openwrt.org,mirror.sjtu.edu.cn/openwrt,g' /etc/opkg/distfeeds.conf
+# sed -i 's,https://downloads.openwrt.org/snapshots/packages/arm_cortex-a9_vfpv3-d16/,g' /etc/opkg/distfeeds.conf
 
 # log level
 uci set system.@system[0].conloglevel='7'
