@@ -20,7 +20,7 @@ define Package/$(PKG_NAME)
   SECTION:=luci
   CATEGORY:=LuCI
   TITLE:=LuCI support for Default Settings
-  MAINTAINER:=Eliminater74
+  MAINTAINER:=ferboiar
   PKGARCH:=all
   DEPENDS:=+luci-base +luci +bash
 endef
