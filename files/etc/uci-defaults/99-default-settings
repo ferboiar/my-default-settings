@@ -1,8 +1,8 @@
 #!/bin/sh
 ###################################################################
-# default-settings (C) 2021 By Eliminater74                       #
+# default-settings (C) 2022 By ferboiar                           #
 #                                                                 #
-# Updated On: 09/05/2021                                          #
+# Updated On: 11/05/2022                                          #
 ###################################################################
 
 version=$(uci -q get base_config.@status[0].version)
@@ -10,33 +10,31 @@ version=$(uci -q get base_config.@status[0].version)
 uci set luci.main.lang=auto
 uci commit luci
 
-uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
-uci commit luci
+#uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
+#uci commit luci
 
 uci set fstab.@global[0].anon_mount=1
 uci commit fstab
 
-uci -q set upnpd.config.enabled='1'
-uci commit upnpd
+#uci -q set upnpd.config.enabled='1'
+#uci commit upnpd
 
 uci -q batch <<-EOF
-uci set system.@system[0].timezone=UTC
-uci set system.@system[0].zonename=America/New York
+uci set system.@system[0].timezone='CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00'
+uci set system.@system[0].zonename='Europe/Madrid'
 delete system.ntp.server
-add_list system.ntp.server='0.us.pool.ntp.org'
-add_list system.ntp.server='1.us.pool.ntp.org'
-add_list system.ntp.server='2.us.pool.ntp.org'
-add_list system.ntp.server='3.us.pool.ntp.org'
+add_list system.ntp.server='hora.roa.es'
+add_list system.ntp.server='hora.rediris.es'
+add_list system.ntp.server='pulsar.rediris.es'
+add_list system.ntp.server='minuto.roa.es'
 EOF
 uci commit system
 
 # dnsmasq
 uci -q batch <<-EOF
 set dhcp.@dnsmasq[0].cachesize='1500'
-set dhcp.@dnsmasq[0].min_ttl='3600'
-set dhcp.@dnsmasq[0].filter_aaaa='0'
-set dhcp.@dnsmasq[0].localservice='0'
-set dhcp.@dnsmasq[0].nonwildcard='0'
+set dhcp.@dnsmasq[0].min_ttl='3600'  revisar
+set dhcp.@dnsmasq[0].filter_aaaa='0'  revisar
 set dhcp.lan.ndp=''
 set dhcp.lan.ra='hybrid'
 set dhcp.lan.ndp='hybrid'
