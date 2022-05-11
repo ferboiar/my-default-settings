@@ -1,27 +1,23 @@
 #!/bin/sh
-###################################################################
-# default-settings (C) 2022 By ferboiar                           #
-#                                                                 #
-# Updated On: 11/05/2022                                          #
-###################################################################
+###########################
+# default-settings 2022   #
+#                         #
+# Updated On: 11/05/2022  #
+###########################
 
 version=$(uci -q get base_config.@status[0].version)
 
 uci set luci.main.lang=auto
-uci commit luci
-
 #uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
-#uci commit luci
+uci commit luci
 
 uci set fstab.@global[0].anon_mount=1
 uci commit fstab
 
-#uci -q set upnpd.config.enabled='1'
-#uci commit upnpd
-
 uci -q batch <<-EOF
-uci set system.@system[0].timezone='CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00'
-uci set system.@system[0].zonename='Europe/Madrid'
+set system.@system[0].hostname=wrt32x
+set system.@system[0].timezone='CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00'
+set system.@system[0].zonename='Europe/Madrid'
 delete system.ntp.server
 add_list system.ntp.server='hora.roa.es'
 add_list system.ntp.server='hora.rediris.es'
@@ -30,47 +26,12 @@ add_list system.ntp.server='minuto.roa.es'
 EOF
 uci commit system
 
-# dnsmasq
-uci -q batch <<-EOF
-set dhcp.@dnsmasq[0].cachesize='1500'
-set dhcp.@dnsmasq[0].min_ttl='3600'  revisar
-set dhcp.@dnsmasq[0].filter_aaaa='0'  revisar
-set dhcp.lan.ndp=''
-set dhcp.lan.ra='hybrid'
-set dhcp.lan.ndp='hybrid'
-set dhcp.lan.dhcpv6='hybrid'
-set dhcp.lan.ignore='0'
-set dhcp.lan.ra_management='1'
-set dhcp.lan.ra_default='1'
-set dhcp.lan.force='1'
-del dhcp.@dnsmasq[0].rebind_protection='1'
-EOF
-uci commit dhcp
-sed -i '/log-facility/d' /etc/dnsmasq.conf
-echo "log-facility=/dev/null" >> /etc/dnsmasq.conf
-
-
-uci -q batch <<-EOF
-set network.@globals[0].ula_prefix=''
-set network.lan.delegate='0'
-set network.wan.mtu=1460
-set network.wan.metric='41'
-set network.wan.delegate='0'
-set network.wan.ipv6='auto'
-EOF
-uci commit network
-
 # opkg mirror
 # sed -i 's,https://downloads.openwrt.org/snapshots/packages/arm_cortex-a9_vfpv3-d16/,g' /etc/opkg/distfeeds.conf
 
 # log level
-uci set system.@system[0].conloglevel='7'
-uci set system.@system[0].cronloglevel='8'
-uci commit system
-
-# zram
-uci set system.@system[0].zram_size_mb='1536'
-uci set system.@system[0].zram_comp_algo='lz4'
+uci set system.@system[0].conloglevel='8'
+uci set system.@system[0].cronloglevel='5'
 uci commit system
 
 if [ "$(uci -q get dhcp.@dnsmasq[0].port)" != "53" ]; then
@@ -81,88 +42,45 @@ fi
 echo "$(uci -q get uhttpd.main.index_page)" | grep -q "cgi-bin/luci" ||
 	uci -q add_list uhttpd.main.index_page='cgi-bin/luci' && uci commit uhttpd
 
-/etc/init.d/wizard disable
+#/etc/init.d/wizard disable
 
 sed -i "s/git-.*-\(.*\)/git-\1/g" /usr/lib/lua/luci/version.lua
 
 [ "$(echo "$(/sbin/cpuinfo 2>/dev/null)" | grep -i "MHz")" ] || sed -i "s/_('CPU Info'),cpuinfo.cpufreq,//" /www/luci-static/resources/view/status/include/10_system.js
 
 
-rm -f /usr/lib/lua/luci/view/admin_status/index/ddns.htm
-rm -f /usr/lib/lua/luci/view/admin_status/index/minidlna.htm
-rm -f /usr/lib/lua/luci/view/admin_status/index/mwan.htm
-rm -f /usr/lib/lua/luci/view/admin_status/index/upnp.htm
-
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/aria2.lua
-# sed -i 's/services/nas/g' /usr/lib/lua/luci/view/aria2/overview_status.htm
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/hd_idle.lua
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/samba.lua
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/minidlna.lua
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/transmission.lua
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/mjpg-streamer.lua
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/p910nd.lua
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/usb_printer.lua
-# sed -i 's/\"services\"/\"nas\"/g' /usr/lib/lua/luci/controller/xunlei.lua
-# sed -i 's/services/nas/g'  /usr/lib/lua/luci/view/minidlna_status.htm
-
 # MAGIC=$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")
 # echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$MAGIC" >> /etc/opkg/distfeeds.conf
 #echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")" >> /etc/opkg/distfeeds.conf
 
-
-echo 'src/gz purefusion_packages https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/packages' >> /etc/opkg/distfeeds.conf
-echo 'src/gz purefusion_base https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/base' >> /etc/opkg/distfeeds.conf
-echo 'src/gz purefusion_luci https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/luci' >> /etc/opkg/distfeeds.conf
-echo 'src/gz purefusion_routing https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/routing' >> /etc/opkg/distfeeds.conf
-echo 'src/gz purefusion_telephony https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/telephony' >> /etc/opkg/distfeeds.conf
+#echo 'src/gz purefusion_packages https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/packages' >> /etc/opkg/distfeeds.conf
+#echo 'src/gz purefusion_base https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/base' >> /etc/opkg/distfeeds.conf
+#echo 'src/gz purefusion_luci https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/luci' >> /etc/opkg/distfeeds.conf
+#echo 'src/gz purefusion_routing https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/routing' >> /etc/opkg/distfeeds.conf
+#echo 'src/gz purefusion_telephony https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/telephony' >> /etc/opkg/distfeeds.conf
 sed -i '/tomato/d' /etc/opkg/distfeeds.conf
 
 ln -sf /sbin/ip /usr/bin/ip
 
 ### ---------------------------------------------------------------------------------------------------------- ###
+
+####  --------------------- #####
 ##### SPECIAL MODIFICATIONS #####
 ##### --------------------- #####
-###  Modify the host name, the OpenWrt-123 modifications you like on the line (not pure digital)
-# sed -i '/uci commit system/i\uci set system.@system[0].hostname='OpenWrt-123''
 
 ###  The version number is displayed in its own name (281.67716 million  Build  $ (TZ = UTC-8  DATE  "+% Y.% m.% D")  @  These are the increase of)
-sed -i "s/OpenWrt /Compiled By Eliminater74 On $(TZ=UTC-8 date "+%m.%d.%Y") @ OpenWrt /g"
-
-### Set the  password to be empty (you do not need a password to log in when installing the firmware, and then modify the password you want)
-# sed -i 's@.*CYXluq4wUazHjmCDBCqXF*@#&@g'
-
-### Delete the default password
-# sed -i "/CYXluq4wUazHjmCDBCqXF/d"
-
-### Change /etc/profile to allow running scripts as bash
-sed 's/./bash/' /etc/profile
+sed -i "s/OpenWrt /Compiled on $(TZ=UTC+2 date "+%m.%d.%Y") @ OpenWrt /g"
 
 ### ---------------------------------------------------------------------------------------------------------- ###
 
-#sed -i 's#downloads.openwrt.org#mirrors.cloud.tencent.com/lede#g' /etc/opkg/distfeeds.conf
 #sed -i 's/root::0:0:99999:7:::/root:$1$V4UetPzk$CYXluq4wUazHjmCDBCqXF.:0:0:99999:7:::/g' /etc/shadow
 
-sed -i "s/# //g" /etc/opkg/distfeeds.conf
-# sed -i '/openwrt_luci/ { s/snapshots/releases\/18.06.9/g; }'  /etc/opkg/distfeeds.conf
-
-sed -i '/REDIRECT --to-ports 53/d' /etc/firewall.user
-echo 'iptables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
-echo 'iptables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
-#echo '[ -n "$(command -v ip6tables)" ] && ip6tables -t nat -A PREROUTING -p udp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
-#echo '[ -n "$(command -v ip6tables)" ] && ip6tables -t nat -A PREROUTING -p tcp --dport 53 -j REDIRECT --to-ports 53' >> /etc/firewall.user
-
-## Lets Keep Wireless Enabled
+## Lets keep Wireless Enabled (after downloading the firmware, the wireless is turned off by default)
 sed -i '/option disabled/d' /etc/config/wireless
+# wifi off: set wireless.radio${devidx}.disabled=1
+# wifi on: set wireless.radio${devidx}.disabled=0
 sed -i '/set wireless.radio${devidx}.disabled/d' /lib/wifi/mac80211.sh
 wifi up
-
-# sed -i '/DISTRIB_REVISION/d' /etc/openwrt_release
-# echo "DISTRIB_REVISION='R21.8.6'" >> /etc/openwrt_release
-# sed -i '/DISTRIB_DESCRIPTION/d' /etc/openwrt_release
-# echo "DISTRIB_DESCRIPTION='OpenWrt '" >> /etc/openwrt_release
-
-sed -i '/log-facility/d' /etc/dnsmasq.conf
-echo "log-facility=/dev/null" >> /etc/dnsmasq.conf
 
 # kB
 memtotal=$(grep MemTotal /proc/meminfo | awk '{print $2}')
@@ -204,14 +122,17 @@ test "$version" -lt 1 && {
 	uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
 	uci -q set dhcp.@dnsmasq[0].localservice='0'
 	uci -q set dhcp.@dnsmasq[0].localise_queries='1'
-	uci -q set dhcp.@dnsmasq[0].rebind_protection='0'
-	uci -q set dhcp.@dnsmasq[0].rebind_localhost='1'
 	uci commit dhcp
 	uci -q set system.@system[0].zram_comp_algo='zstd'
 	uci -q set system.@system[0].zram_size_mb="$(expr "$memtotal" / 1024 / 3)"
 	uci commit system
 	version=1
 }
+
+# zram
+#uci set system.@system[0].zram_size_mb='1536'
+#uci set system.@system[0].zram_comp_algo='lz4'
+#uci commit system
 
 # sysctl overwrite
 SYSCTL_LOCAL=/etc/sysctl.d/50-local.conf
