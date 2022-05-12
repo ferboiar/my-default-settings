@@ -5,7 +5,7 @@
 # Updated On: 11/05/2022  #
 ###########################
 
-version=$(uci -q get base_config.@status[0].version)
+#version=$(uci -q get base_config.@status[0].version)
 
 uci set luci.main.lang=auto
 #uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
@@ -39,12 +39,7 @@ fi
 echo "$(uci -q get uhttpd.main.index_page)" | grep -q "cgi-bin/luci" ||
 	uci -q add_list uhttpd.main.index_page='cgi-bin/luci' && uci commit uhttpd
 
-#/etc/init.d/wizard disable
-
-sed -i "s/git-.*-\(.*\)/git-\1/g" /usr/lib/lua/luci/version.lua
-
 [ "$(echo "$(/sbin/cpuinfo 2>/dev/null)" | grep -i "MHz")" ] || sed -i "s/_('CPU Info'),cpuinfo.cpufreq,//" /www/luci-static/resources/view/status/include/10_system.js
-
 
 # MAGIC=$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")
 # echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$MAGIC" >> /etc/opkg/distfeeds.conf
@@ -110,31 +105,28 @@ else
 	nf_conntrack_max=16384
 fi
 
-test "$version" -lt 1 && {
-	uci -q get dhcp.@dnsmasq[0] || uci -q add dhcp dnsmasq
-	uci -q set dhcp.@dnsmasq[0].cachesize="$cachesize"
-	uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
-	uci commit dhcp
-#	uci -q set system.@system[0].zram_comp_algo='lz4'
-#	uci -q set system.@system[0].zram_size_mb="$(expr "$memtotal" / 1024 / 3)"
-#	uci commit system
-	version=1
-}
+uci -q set dhcp.@dnsmasq[0].cachesize="$cachesize"
+uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
+uci commit dhcp
+# uci -q set system.@system[0].zram_comp_algo='lz4'
+# uci -q set system.@system[0].zram_size_mb="$(expr "$memtotal" / 1024 / 3)"
+# uci commit system
 
 # sysctl overwrite
 SYSCTL_LOCAL=/etc/sysctl.d/50-local.conf
 mkdir -p /etc/sysctl.d
 printf >"$SYSCTL_LOCAL"
 echo net.nf_conntrack_max="$nf_conntrack_max" >>"$SYSCTL_LOCAL"
-echo net.ipv4.ip_early_demux=0 >>"$SYSCTL_LOCAL"
-echo net.bridge.bridge-nf-call-iptables=0 >>"$SYSCTL_LOCAL"
-echo net.ipv4.fib_multipath_hash_policy=1 >>"$SYSCTL_LOCAL"
-echo net.ipv4.tcp_congestion_control=cubic >>"$SYSCTL_LOCAL"
-echo net.netfilter.nf_conntrack_helper=1 >>"$SYSCTL_LOCAL"
+# echo net.ipv4.ip_early_demux=0 >>"$SYSCTL_LOCAL"
+# echo net.bridge.bridge-nf-call-iptables=0 >>"$SYSCTL_LOCAL"
+# echo net.ipv4.fib_multipath_hash_policy=1 >>"$SYSCTL_LOCAL"
+# echo net.ipv4.tcp_congestion_control=cubic >>"$SYSCTL_LOCAL"
+# echo net.netfilter.nf_conntrack_helper=1 >>"$SYSCTL_LOCAL"
+# Modificar la longitud de la cola de mensajes:
 echo kernel.msgmax = 65536 >>"$SYSCTL_LOCAL"
 echo kernel.msgmnb = 65536 >>"$SYSCTL_LOCAL"
+# cierra la partición de intercambio:
 echo vm.swappiness=0 >>"$SYSCTL_LOCAL"
-
 
 # hsts=1/on/yes: same as --hsts
 # hsts=0/off/no: same as --no-hsts
@@ -151,28 +143,108 @@ uci set network.globals.packet_steering='1'
 uci commit network
 /etc/init.d/network restart
 
+# cp -pR /www/cgi-bin/* /www/
 
-cp -pR /www/cgi-bin/* /www/
-
-
-uci -q set base_config.@status[0].version="$version"
-uci commit base_config
-
-# disable coremark
-sed -i '/coremark/d' /etc/crontabs/root
-crontab /etc/crontabs/root
-
-# disable linkease
-uci set linkease.@linkease[0].enabled='0'
-uci commit linkease
-/etc/init.d/linkease restart
-
-# link
-ln -sf /bin/busybox /bin/top
+#uci -q set base_config.@status[0].version="$version"
+#uci commit base_config
 
 # luci cache
 rm -rf /tmp/luci-modulecache
 rm -f /tmp/luci-indexcache*
 rm -rf /tmp/luci-*
+
+##############################################################################
+# >>>>>>>>>>>>>>>>>>>>>>>  H  A  R  D  E  N  I  N  G <<<<<<<<<<<<<<<<<<<<<<< #
+##############################################################################
+#
+# > Restrict SSH access to the local network (LAN)
+#
+uci set dropbear.@dropbear[0].Interface="lan"
+uci commit dropbear
+service dropbear restart 
+# -- END --
+#
+# > Restrict Luci/uhttpd access to the local network, access over HTTPS
+#
+#  Load the list of ipv4/ipv6 addresses into local variables for easily handling.
+network_get_ipaddrs ip4addrs 'lan'
+
+uci delete uhttpd.main.listen_http
+uci delete uhttpd.main.listen_https
+
+for ip4 in $ip4addrs; do
+    uci add_list uhttpd.main.listen_http="$ip4:80"
+    uci add_list uhttpd.main.listen_https="$ip4:443"
+done
+
+# (Optional) Ensure that we use/redirect to HTTPS always
+uci set uhttpd.main.redirect_https='1'
+
+uci commit uhttpd
+service uhttpd restart
+service uhttpd enable
+# -- END --
+#
+# > BCP38: http://www.bcp38.info/index.php/Main_Page
+#
+# This is less about protecting your router and more about preventing your network's 
+# contribution to some types of DoS/DDoS attack
+uci set bcp38.@bcp38[0].enabled='1'
+uci set bcp38.@bcp38[0].interface='wan' #Adjust to match your WAN port - may be something like eth0.2 for example.
+uci commit bcp38 
+
+service bcp38 restart
+service bcp38 enable
+# -- END --
+#
+# > BanIP: https://github.com/openwrt/packages/blob/master/net/banip/files/README.md
+#
+uci set banip.global.ban_enabled='1'
+uci set banip.global.ban_trigger='wan' #Configure to your proper WAN interface, eg. 'eth0.2' or 'wan'
+uci delete banip.global.ban_sources
+uci add_list banip.global.ban_sources='darklist'
+uci add_list banip.global.ban_sources='debl'
+uci add_list banip.global.ban_sources='drop'
+uci add_list banip.global.ban_sources='feodo'
+uci add_list banip.global.ban_sources='firehol1'
+uci add_list banip.global.ban_sources='greensnow'
+uci add_list banip.global.ban_sources='iblockads'
+uci add_list banip.global.ban_sources='iblockspy'
+uci add_list banip.global.ban_sources='myip'
+uci add_list banip.global.ban_sources='nixspam'
+uci add_list banip.global.ban_sources='proxy'
+uci add_list banip.global.ban_sources='sslbl'
+uci add_list banip.global.ban_sources='talos'
+uci add_list banip.global.ban_sources='threat'
+uci add_list banip.global.ban_sources='tor'
+uci add_list banip.global.ban_sources='uceprotect1'
+uci add_list banip.global.ban_sources='yoyo'
+
+# Allowlist a few sites that I've seen some blocklists break before.
+echo "enro.com" >> /etc/banip/banip.whitelist
+echo "www.reddit.com" >> /etc/banip/banip.whitelist
+echo "yelp.com" >> /etc/banip/banip.whitelist
+
+uci commit banip
+service banip restart
+service banip enable
+
+# refreshing the blocklists every 24 hours
+echo "15 07 * * * /etc/init.d/banip reload" >> /etc/crontabs/root
+crontab /etc/crontabs/root
+# -- END --
+#
+# > Firewall DROP external connections
+# 
+if [ $(uci get firewall.@zone[0].name) = 'wan' ]; then zona=0
+elif [ $(uci get firewall.@zone[-1].name) = 'wan' ]; then zona=-1 
+else [ $(uci get firewall.@zone[-2].name) = 'wan' ]; then zona=-2 
+fi
+
+uci set firewall.@zone[$zona].input='DROP'
+uci set firewall.@zone[$zona].forward='DROP'
+uci commit firewall
+service firewall restart
+# -- END --
 
 exit 0
