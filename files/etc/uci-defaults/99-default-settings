@@ -61,14 +61,8 @@ ln -sf /sbin/ip /usr/bin/ip
 
 ### ---------------------------------------------------------------------------------------------------------- ###
 
-####  --------------------- #####
-##### SPECIAL MODIFICATIONS #####
-##### --------------------- #####
-
 ###  The version number is displayed in its own name (281.67716 million  Build  $ (TZ = UTC-8  DATE  "+% Y.% m.% D")  @  These are the increase of)
 sed -i "s/OpenWrt /Compiled on $(TZ=UTC+2 date "+%m.%d.%Y") @ OpenWrt /g"
-
-### ---------------------------------------------------------------------------------------------------------- ###
 
 #sed -i 's/root::0:0:99999:7:::/root:$1$V4UetPzk$CYXluq4wUazHjmCDBCqXF.:0:0:99999:7:::/g' /etc/shadow
 
@@ -82,6 +76,7 @@ sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.dis
 wifi up
 
 # kB
+# wrt32x: 512 MB RAM DDR3 / 256 MB flash memory
 memtotal=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 if test "$memtotal" -ge 1048576; then
 	# > 1024M
@@ -94,7 +89,7 @@ elif test "$memtotal" -ge 524288; then
 	dnsforwardmax=10000
 	nf_conntrack_max=131072
 elif test "$memtotal" -ge 262144; then
-	# <= 512M
+	# <= 512M (wrt32x here!)
 	cachesize=8192
 	dnsforwardmax=8192
 	nf_conntrack_max=65536
@@ -119,19 +114,12 @@ test "$version" -lt 1 && {
 	uci -q get dhcp.@dnsmasq[0] || uci -q add dhcp dnsmasq
 	uci -q set dhcp.@dnsmasq[0].cachesize="$cachesize"
 	uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
-	uci -q set dhcp.@dnsmasq[0].localservice='0'
-	uci -q set dhcp.@dnsmasq[0].localise_queries='1'
 	uci commit dhcp
-	uci -q set system.@system[0].zram_comp_algo='lz4'
-	uci -q set system.@system[0].zram_size_mb="$(expr "$memtotal" / 1024 / 3)"
-	uci commit system
+#	uci -q set system.@system[0].zram_comp_algo='lz4'
+#	uci -q set system.@system[0].zram_size_mb="$(expr "$memtotal" / 1024 / 3)"
+#	uci commit system
 	version=1
 }
-
-# zram
-#uci set system.@system[0].zram_size_mb='1536'
-#uci set system.@system[0].zram_comp_algo='lz4'
-#uci commit system
 
 # sysctl overwrite
 SYSCTL_LOCAL=/etc/sysctl.d/50-local.conf
