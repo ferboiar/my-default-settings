@@ -39,8 +39,6 @@ fi
 echo "$(uci -q get uhttpd.main.index_page)" | grep -q "cgi-bin/luci" ||
 	uci -q add_list uhttpd.main.index_page='cgi-bin/luci' && uci commit uhttpd
 
-[ "$(echo "$(/sbin/cpuinfo 2>/dev/null)" | grep -i "MHz")" ] || sed -i "s/_('CPU Info'),cpuinfo.cpufreq,//" /www/luci-static/resources/view/status/include/10_system.js
-
 # MAGIC=$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")
 # echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$MAGIC" >> /etc/opkg/distfeeds.conf
 #echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")" >> /etc/opkg/distfeeds.conf
@@ -57,7 +55,7 @@ ln -sf /sbin/ip /usr/bin/ip
 ### ---------------------------------------------------------------------------------------------------------- ###
 
 ###  The version number is displayed in its own name (281.67716 million  Build  $ (TZ = UTC-8  DATE  "+% Y.% m.% D")  @  These are the increase of)
-sed -i "s/OpenWrt /Compiled on $(TZ=UTC+2 date "+%m.%d.%Y") @ OpenWrt /g"
+#sed -i "s/OpenWrt /Compiled on $(TZ=UTC+2 date "+%m.%d.%Y") @ OpenWrt /g"
 
 #sed -i 's/root::0:0:99999:7:::/root:$1$V4UetPzk$CYXluq4wUazHjmCDBCqXF.:0:0:99999:7:::/g' /etc/shadow
 
@@ -108,9 +106,6 @@ fi
 uci -q set dhcp.@dnsmasq[0].cachesize="$cachesize"
 uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
 uci commit dhcp
-# uci -q set system.@system[0].zram_comp_algo='lz4'
-# uci -q set system.@system[0].zram_size_mb="$(expr "$memtotal" / 1024 / 3)"
-# uci commit system
 
 # sysctl overwrite
 SYSCTL_LOCAL=/etc/sysctl.d/50-local.conf
@@ -139,9 +134,9 @@ echo 'hsts=0' > /root/.wgetrc
 
 # packet_steering
 # use every cpu to handle packet traffic
-uci set network.globals.packet_steering='1'
-uci commit network
-/etc/init.d/network restart
+#uci set network.globals.packet_steering='1'
+#uci commit network
+#/etc/init.d/network restart
 
 # cp -pR /www/cgi-bin/* /www/
 
@@ -159,27 +154,14 @@ rm -rf /tmp/luci-*
 #
 # > Restrict SSH access to the local network (LAN)
 #
-uci set dropbear.@dropbear[0].Interface="lan"
+uci set dropbear.@dropbear[0].Interface='lan'
 uci commit dropbear
 service dropbear restart 
 # -- END --
 #
-# > Restrict Luci/uhttpd access to the local network, access over HTTPS
+# > Ensure that we use/redirect to HTTPS always
 #
-#  Load the list of ipv4/ipv6 addresses into local variables for easily handling.
-network_get_ipaddrs ip4addrs 'lan'
-
-uci delete uhttpd.main.listen_http
-uci delete uhttpd.main.listen_https
-
-for ip4 in $ip4addrs; do
-    uci add_list uhttpd.main.listen_http="$ip4:80"
-    uci add_list uhttpd.main.listen_https="$ip4:443"
-done
-
-# (Optional) Ensure that we use/redirect to HTTPS always
 uci set uhttpd.main.redirect_https='1'
-
 uci commit uhttpd
 service uhttpd restart
 service uhttpd enable
