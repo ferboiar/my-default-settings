@@ -28,8 +28,10 @@ EOF
 uci commit system
 
 # log level
-uci set system.@system[0].conloglevel='8'
-uci set system.@system[0].cronloglevel='5'
+# 8 debug, 5 warning
+uci set system.@system[0].conloglevel='5'
+# 5 debug, 9 warning
+uci set system.@system[0].cronloglevel='9'
 uci commit system
 
 if [ "$(uci -q get dhcp.@dnsmasq[0].port)" != "53" ]; then
@@ -62,12 +64,11 @@ ln -sf /sbin/ip /usr/bin/ip
 
 ## Lets keep Wireless Enabled (after downloading the firmware, the wireless is turned off by default)
 # ref: https://forum.openwrt.org/t/solved-enable-wi-fi-and-connect-to-a-network-on-first-boot/47399/24
-sed -i '/option disabled/d' /etc/config/wireless
+#sed -i '/option disabled/d' /etc/config/wireless
 # wifi off: set wireless.radio${devidx}.disabled=1
 # wifi on: set wireless.radio${devidx}.disabled=0
-#sed -i '/set wireless.radio${devidx}.disabled/d' /lib/wifi/mac80211.sh
-sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.disabled=0/g' /lib/wifi/mac80211.sh
-wifi up
+#sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.disabled=0/g' /lib/wifi/mac80211.sh
+#wifi up
 
 # kB
 # wrt32x: 512 MB RAM DDR3 / 256 MB flash memory
@@ -220,8 +221,8 @@ crontab /etc/crontabs/root
 # > Firewall DROP external connections
 # 
 if [ $(uci get firewall.@zone[0].name) = 'wan' ]; then zona=0
-elif [ $(uci get firewall.@zone[-1].name) = 'wan' ]; then zona=-1 
-else [ $(uci get firewall.@zone[-2].name) = 'wan' ]; then zona=-2 
+elif [ $(uci get firewall.@zone[-1].name) = 'wan' ]; then zona=-1
+elif [ $(uci get firewall.@zone[-2].name) = 'wan' ]; then zona=-2
 fi
 
 uci set firewall.@zone[$zona].input='DROP'
