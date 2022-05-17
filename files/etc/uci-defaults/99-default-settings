@@ -148,8 +148,6 @@ echo 'hsts=0' > /root/.wgetrc
 #uci commit network
 #/etc/init.d/network restart
 
-# cp -pR /www/cgi-bin/* /www/
-
 #uci -q set base_config.@status[0].version="$version"
 #uci commit base_config
 
