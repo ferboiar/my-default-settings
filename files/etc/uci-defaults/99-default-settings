@@ -9,7 +9,10 @@
 
 uci set luci.main.lang=auto
 #uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
-uci set luci.main.mediaurlbase=/luci-static/material
+#uci set luci.main.mediaurlbase=/luci-static/material
+uci set luci.main.mediaurlbase=/luci-static/argon
+uci set argon.@global[0].mode='dark'
+uci set argon.@global[0].bing_background='1'
 uci commit luci
 
 uci set fstab.@global[0].anon_mount=1
