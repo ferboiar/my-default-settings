@@ -180,7 +180,7 @@ service uhttpd enable
 # This is less about protecting your router and more about preventing your network's 
 # contribution to some types of DoS/DDoS attack
 uci set bcp38.@bcp38[0].enabled='1'
-uci set bcp38.@bcp38[0].interface='wan' #Adjust to match your WAN port - may be something like eth0.2 for example.
+uci set bcp38.@bcp38[0].interface=$WAN_IFACE #Adjust to match your WAN port - may be something like eth0.2 for example.
 uci commit bcp38 
 
 service bcp38 restart
