@@ -9,8 +9,8 @@
 
 uci set luci.main.lang=auto
 #uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
-#uci set luci.main.mediaurlbase=/luci-static/material
-uci set luci.main.mediaurlbase=/luci-static/argon
+uci set luci.main.mediaurlbase=/luci-static/material
+#uci set luci.main.mediaurlbase=/luci-static/argon
 uci set argon.@global[0].mode='dark'
 uci set argon.@global[0].bing_background='1'
 uci commit luci
@@ -190,7 +190,7 @@ service bcp38 enable
 # > BanIP: https://github.com/openwrt/packages/blob/master/net/banip/files/README.md
 #
 uci set banip.global.ban_enabled='1'
-uci set banip.global.ban_trigger='wan' #Configure to your proper WAN interface, eg. 'eth0.2' or 'wan'
+uci set banip.global.ban_trigger=$WAN_IFACE #Configure to your proper WAN interface, eg. 'eth0.2' or 'wan'
 uci set banip.global.ban_autodetect='1'
 uci set banip.global.ban_logsrc_enabled='1'
 uci set banip.global.ban_maxqueue='4'
@@ -242,7 +242,7 @@ crontab /etc/crontabs/root
 # > adblock
 #
 uci set adblock.global.adb_enabled='1'
-uci set adblock.global.adb_trigger='wan'
+uci set adblock.global.adb_trigger=$WAN_IFACE
 uci set adblock.global.adb_debug='0'
 uci set adblock.global.adb_dnsfilereset='0'
 uci set adblock.global.adb_mail='0'
