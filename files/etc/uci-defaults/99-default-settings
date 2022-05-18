@@ -24,7 +24,7 @@ vbell off
 EOF
 
 #Prompt colors
-sed -i 's/^export PS1.*/export PS1='\''\\\[\\033\[01;31m\\\]\\h\\\[\\033\[01;34m\\\] \\w #\\\[\\033\[00m\\\] '\''/' /etc/profile
+sed -i 's/^export PS1.*/export PS1='\''\\\[\\033\[01;31m\\\]\\h\\\[\\033\[01;30m\\\]@\\\[\\033\[01;32m\\\]\\w\\\[\\033\[01;34m\\\] #\\\[\\033\[00m\\\] '\''/' /etc/profile
 
 uci set fstab.@global[0].anon_mount=1
 uci commit fstab
