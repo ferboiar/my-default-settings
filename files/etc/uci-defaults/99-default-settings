@@ -15,6 +15,17 @@ uci set argon.@global[0].mode='dark'
 uci set argon.@global[0].bing_background='1'
 uci commit luci
 
+#Screen settings
+cat >> /etc/screenrc << EOF
+defscrollback 1000
+termcapinfo xterm ti@:te@
+hardstatus alwayslastline '%{= kG}[ %{G}%H %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %d/%m %{W}%c %{g}]'
+vbell off
+EOF
+
+#Prompt colors
+sed -i 's/^export PS1.*/export PS1='\''\\\[\\033\[01;31m\\\]\\h\\\[\\033\[01;34m\\\] \\w #\\\[\\033\[00m\\\] '\''/' /etc/profile
+
 uci set fstab.@global[0].anon_mount=1
 uci commit fstab
 
