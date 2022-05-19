@@ -1,8 +1,8 @@
 #!/bin/sh
 ###########################
-# default-settings 2022   #
+# my-default-settings     #
 #                         #
-# Updated On: 17/05/2022  #
+# Updated On: 19/05/2022  #
 ###########################
 
 #version=$(uci -q get base_config.@status[0].version)
@@ -201,7 +201,7 @@ service bcp38 enable
 # > BanIP: https://github.com/openwrt/packages/blob/master/net/banip/files/README.md
 #
 uci set banip.global.ban_enabled='1'
-uci set banip.global.ban_trigger=$WAN_IFACE #Configure to your proper WAN interface, eg. 'eth0.2' or 'wan'
+uci set banip.global.ban_trigger='wan'
 uci set banip.global.ban_autodetect='1'
 uci set banip.global.ban_logsrc_enabled='1'
 uci set banip.global.ban_maxqueue='4'
@@ -213,7 +213,6 @@ uci set banip.global.ban_target_dst='REJECT'
 uci set banip.global.ban_settype_src='country' 'dshield'
 uci set banip.global.ban_loglimit='100'
 uci set banip.global.ban_logopts_src='-m limit --limit 2/sec'
-uci set banip.global.ban_countries='ru' 'cn' 'af' 'ir' 'iq' 'ua' 'ao' 'ai' 'ar' 'az' 'bd' 'by' 'br'
 uci set banip.global.ban_localsources='blacklist'
 uci set banip.global.ban_autoblacklist='1'
 uci set banip.global.ban_autowhitelist='1'
@@ -235,6 +234,19 @@ uci add_list banip.global.ban_sources='threat'
 uci add_list banip.global.ban_sources='tor'
 uci add_list banip.global.ban_sources='uceprotect1'
 uci add_list banip.global.ban_sources='yoyo'
+uci delete banip.global.ban_countries
+uci add_list banip.global.ban_countries='ru'
+uci add_list banip.global.ban_countries='cn'
+uci add_list banip.global.ban_countries='af'
+uci add_list banip.global.ban_countries='iq'
+uci add_list banip.global.ban_countries='ua'
+uci add_list banip.global.ban_countries='ao'
+uci add_list banip.global.ban_countries='ai'
+uci add_list banip.global.ban_countries='ar'
+uci add_list banip.global.ban_countries='az'
+uci add_list banip.global.ban_countries='bd'
+uci add_list banip.global.ban_countries='by'
+uci add_list banip.global.ban_countries='br'
 
 # Allowlist a few sites that I've seen some blocklists break before.
 echo "enro.com" >> /etc/banip/banip.whitelist
@@ -253,7 +265,7 @@ crontab /etc/crontabs/root
 # > adblock
 #
 uci set adblock.global.adb_enabled='1'
-uci set adblock.global.adb_trigger=$WAN_IFACE
+uci set adblock.global.adb_trigger='wan'
 uci set adblock.global.adb_debug='0'
 uci set adblock.global.adb_dnsfilereset='0'
 uci set adblock.global.adb_mail='0'
@@ -268,9 +280,29 @@ uci set adblock.global.adb_eng_sources='bluGo/formats/domains.txt'
 uci set adblock.global.adb_forcedns='1'
 uci set adblock.global.adb_zonelist='lan'
 uci set adblock.global.adb_stb_sources='alternates/fakenews/hosts'
-uci set adblock.global.adb_utc_sources='drogue' 'adult' 'associations_religieuses' 'bitcoin' 'phishing' 'malware'
 uci set adblock.global.adb_safesearch='0'
-adblock.global.adb_sources='adaway' 'adguard' 'andryou' 'anti_ad' 'anudeep' 'disconnect' 'energized' 'openphish' 'reg_es' 'spam404' 'stevenblack' 'stopforumspam' 'whocares' 'yoyo'
+uci delete adblock.global.adb_utc_sources
+uci add_list adblock.global.adb_utc_sources='drogue'
+uci add_list adblock.global.adb_utc_sources='adult'
+uci add_list adblock.global.adb_utc_sources='associations_religieuses'
+uci add_list adblock.global.adb_utc_sources='bitcoin'
+uci add_list adblock.global.adb_utc_sources='phishing'
+uci add_list adblock.global.adb_utc_sources='malware'
+uci delete adblock.global.adb_sources
+uci add_list adblock.global.adb_sources='adaway'
+uci add_list adblock.global.adb_sources='adguard'
+uci add_list adblock.global.adb_sources='andryou'
+uci add_list adblock.global.adb_sources='anti_ad'
+uci add_list adblock.global.adb_sources='anudeep'
+uci add_list adblock.global.adb_sources='disconnect'
+uci add_list adblock.global.adb_sources='energized'
+uci add_list adblock.global.adb_sources='openphish'
+uci add_list adblock.global.adb_sources='reg_es'
+uci add_list adblock.global.adb_sources='spam404'
+uci add_list adblock.global.adb_sources='stevenblack'
+uci add_list adblock.global.adb_sources='stopforumspam'
+uci add_list adblock.global.adb_sources='whocares'
+uci add_list adblock.global.adb_sources='yoyo'
 
 uci commit adblock
 service adblock restart
