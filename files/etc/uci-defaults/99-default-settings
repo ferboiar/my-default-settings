@@ -15,12 +15,24 @@ uci set argon.@global[0].mode='dark'
 uci set argon.@global[0].bing_background='1'
 uci commit luci
 
-#Screen settings
+# Screen settings
 cat >> /etc/screenrc << EOF
 defscrollback 1000
 termcapinfo xterm ti@:te@
 hardstatus alwayslastline '%{= kG}[ %{G}%H %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %d/%m %{W}%c %{g}]'
 vbell off
+EOF
+
+# acme installation fix: https://wiki.terrabase.info/wiki/LetsEncrypt_with_ACME_on_OpenWRT
+# change YourEmail@YourProvider.com to your account email
+#mv /usr/lib/acme /usr/lib/acme.OPKG
+#mkdir /usr/lib/acme
+#cp /usr/lib/acme.OPKG/run-acme /usr/lib/acme/
+#/usr/lib/acme.OPKG/acme.sh --install --home /usr/lib/acme --cert-home /etc/acme/certs --config-home /etc/acme/config --accountemail YourEmail@YourProvider.com --accountkey /etc/acme/account --useragent "" --log /var/log/acme.log
+cat >> /etc/profile << EOF
+export LE_WORKING_DIR="/usr/lib/acme"
+export LE_CONFIG_HOME="/etc/acme/config"
+alias acme.sh="/usr/lib/acme/acme.sh --config-home '/etc/acme/config'"
 EOF
 
 #Prompt colors
