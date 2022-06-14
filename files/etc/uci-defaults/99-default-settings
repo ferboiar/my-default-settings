@@ -41,8 +41,10 @@ sed -i 's/^export PS1.*/export PS1='\''\\\[\\033\[01;31m\\\]\\h\\\[\\033\[01;30m
 uci set fstab.@global[0].anon_mount=1
 uci commit fstab
 
+host=$(cat /tmp/sysinfo/model | cut -d" " -f2 | tr '[A-Z]' '[a-z]')
+
 uci -q batch <<-EOF
-set system.@system[0].hostname=wrt32x
+set system.@system[0].hostname=$host
 set system.@system[0].timezone='CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00'
 set system.@system[0].zonename='Europe/Madrid'
 delete system.ntp.server
