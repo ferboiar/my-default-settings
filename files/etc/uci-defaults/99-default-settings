@@ -38,6 +38,9 @@ EOF
 #Prompt colors
 sed -i 's/^export PS1.*/export PS1='\''\\\[\\033\[01;31m\\\]\\h\\\[\\033\[01;30m\\\]@\\\[\\033\[01;32m\\\]\\w\\\[\\033\[01;34m\\\] #\\\[\\033\[00m\\\] '\''/' /etc/profile
 
+### Lets add OpenWrtScripts to PATH
+export PATH=/usr/lib/OpenWrtScripts:"$PATH"
+
 uci set fstab.@global[0].anon_mount=1
 uci commit fstab
 
@@ -70,16 +73,12 @@ fi
 echo "$(uci -q get uhttpd.main.index_page)" | grep -q "cgi-bin/luci" ||
 	uci -q add_list uhttpd.main.index_page='cgi-bin/luci' && uci commit uhttpd
 
-# MAGIC=$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")
-# echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$MAGIC" >> /etc/opkg/distfeeds.conf
-#echo "src/gz purefusion_kmods https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/kmods/$(wget -qO - https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/kmod | sed -n "1p")" >> /etc/opkg/distfeeds.conf
+# Create file to stop: daemon.err miniupnpd[8591]: could not open lease file: /var/upnp.leases
+miniupnpd=/var/upnp.leases
+touch $miniupnpd
 
-#echo 'src/gz purefusion_packages https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/packages' >> /etc/opkg/distfeeds.conf
-#echo 'src/gz purefusion_base https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/base' >> /etc/opkg/distfeeds.conf
-#echo 'src/gz purefusion_luci https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/luci' >> /etc/opkg/distfeeds.conf
-#echo 'src/gz purefusion_routing https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/routing' >> /etc/opkg/distfeeds.conf
-#echo 'src/gz purefusion_telephony https://raw.githubusercontent.com/DevOpenWRT-Router/Linksys_OpenWRT_Releases/main/packages/telephony' >> /etc/opkg/distfeeds.conf
-#sed -i '/tomato/d' /etc/opkg/distfeeds.conf
+uci -q set upnpd.config.enabled='1'
+uci commit upnpd
 
 ln -sf /sbin/ip /usr/bin/ip
 
