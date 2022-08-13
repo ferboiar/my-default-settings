@@ -1,109 +1,21 @@
 #!/bin/sh
-###########################
-# my-default-settings     #
-#                         #
-# Updated On: 19/05/2022  #
-###########################
+############################################################################################################
+# my-default-settings                                                                                      #
+#                                                                                                          #
+# ferboiar, with code taken from here and there, too many references to remember them all. My apologies.   #
+# If you see any part of yours let me know so I can link to you and your repo.                             #
+#                                                                                                          #
+# Updated On: 12/08/2022                                                                                   #
+############################################################################################################
 
 #version=$(uci -q get base_config.@status[0].version)
 
-uci set luci.main.lang=auto
-#uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
-uci set luci.main.mediaurlbase=/luci-static/material
-#uci set luci.main.mediaurlbase=/luci-static/argon
-uci set argon.@global[0].mode='dark'
-uci set argon.@global[0].bing_background='1'
-uci commit luci
+# SQM: Set to "cake" or "pie"
+SQM="pie"
 
-# Screen settings
-cat >> /etc/screenrc << EOF
-defscrollback 1000
-termcapinfo xterm ti@:te@
-hardstatus alwayslastline '%{= kG}[ %{G}%H %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %d/%m %{W}%c %{g}]'
-vbell off
-EOF
-
-# acme installation fix: https://wiki.terrabase.info/wiki/LetsEncrypt_with_ACME_on_OpenWRT
-# change YourEmail@YourProvider.com to your account email
-#mv /usr/lib/acme /usr/lib/acme.OPKG
-#mkdir /usr/lib/acme
-#cp /usr/lib/acme.OPKG/run-acme /usr/lib/acme/
-#/usr/lib/acme.OPKG/acme.sh --install --home /usr/lib/acme --cert-home /etc/acme/certs --config-home /etc/acme/config --accountemail YourEmail@YourProvider.com --accountkey /etc/acme/account --useragent "" --log /var/log/acme.log
-cat >> /etc/profile << EOF
-export LE_WORKING_DIR="/usr/lib/acme"
-export LE_CONFIG_HOME="/etc/acme/config"
-alias acme.sh="/usr/lib/acme/acme.sh --config-home '/etc/acme/config'"
-EOF
-
-#Prompt colors
-sed -i 's/^export PS1.*/export PS1='\''\\\[\\033\[01;31m\\\]\\h\\\[\\033\[01;30m\\\]@\\\[\\033\[01;32m\\\]\\w\\\[\\033\[01;34m\\\] #\\\[\\033\[00m\\\] '\''/' /etc/profile
-
-### Lets add OpenWrtScripts to PATH
-export PATH=/usr/lib/OpenWrtScripts:"$PATH"
-
-uci set fstab.@global[0].anon_mount=1
-uci commit fstab
-
-host=$(cat /tmp/sysinfo/model | cut -d" " -f2 | tr '[A-Z]' '[a-z]')
-
-uci -q batch <<-EOF
-set system.@system[0].hostname=$host
-set system.@system[0].timezone='CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00'
-set system.@system[0].zonename='Europe/Madrid'
-delete system.ntp.server
-add_list system.ntp.server='hora.roa.es'
-add_list system.ntp.server='hora.rediris.es'
-add_list system.ntp.server='pulsar.rediris.es'
-add_list system.ntp.server='minuto.roa.es'
-EOF
-uci commit system
-
-# log level
-# 8 debug, 5 warning
-uci set system.@system[0].conloglevel='5'
-# 5 debug, 9 warning
-uci set system.@system[0].cronloglevel='9'
-uci commit system
-
-if [ "$(uci -q get dhcp.@dnsmasq[0].port)" != "53" ]; then
-	uci -q set dhcp.@dnsmasq[0].port='53'
-	uci commit dhcp
-fi
-
-echo "$(uci -q get uhttpd.main.index_page)" | grep -q "cgi-bin/luci" ||
-	uci -q add_list uhttpd.main.index_page='cgi-bin/luci' && uci commit uhttpd
-
-# Create file to stop: daemon.err miniupnpd[8591]: could not open lease file: /var/upnp.leases
-miniupnpd=/var/upnp.leases
-touch $miniupnpd
-
-uci -q set upnpd.config.enabled='1'
-uci commit upnpd
-
-ln -sf /sbin/ip /usr/bin/ip
-
-### -------------------------------------------- S Q M ------------------------------------------------------- ###
-
-WAN_IFACE=`uci get network.wan.device`
-uci set sqm.eth1.interface=$WAN_IFACE
-uci commit sqm
-/etc/init.d/sqm reload
-
-echo "0 6,14,22 * * * /usr/lib/OpenWrtScripts/autoSQM.sh" >> /etc/crontabs/root
-crontab /etc/crontabs/root
-
-### ---------------------------------------------------------------------------------------------------------- ###
-
-## Lets keep Wireless Enabled (after downloading the firmware, the wireless is turned off by default)
-# ref: https://forum.openwrt.org/t/solved-enable-wi-fi-and-connect-to-a-network-on-first-boot/47399/24
-#sed -i '/option disabled/d' /etc/config/wireless
-# wifi off: set wireless.radio${devidx}.disabled=1
-# wifi on: set wireless.radio${devidx}.disabled=0
-#sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.disabled=0/g' /lib/wifi/mac80211.sh
-#wifi up
-
-# kB
+# set variables according to router memory (kB)
 # wrt32x: 512 MB RAM DDR3 / 256 MB flash memory
+# e8450 : 512 MB RAM DDR3 / 128 MB flash memory
 memtotal=$(grep MemTotal /proc/meminfo | awk '{print $2}')
 if test "$memtotal" -ge 1048576; then
 	# > 1024M
@@ -116,7 +28,7 @@ elif test "$memtotal" -ge 524288; then
 	dnsforwardmax=10000
 	nf_conntrack_max=131072
 elif test "$memtotal" -ge 262144; then
-	# <= 512M (wrt32x here!)
+	# <= 512M (wrt32x & e8450 here!)
 	cachesize=8192
 	dnsforwardmax=8192
 	nf_conntrack_max=65536
@@ -137,11 +49,71 @@ else
 	nf_conntrack_max=16384
 fi
 
-uci -q set dhcp.@dnsmasq[0].cachesize="$cachesize"
-uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
-uci commit dhcp
 
-# sysctl overwrite
+##############################################################################
+# >>>>>>>>>>> LANGUAGE, THEME, CONSOLE & BASIC SETTINGS  <<<<<<<<<<<<<<<<<<< #
+##############################################################################
+#
+# > LANGUAGE & THEME SETTINGS
+#
+uci set luci.main.lang=auto
+#uci set luci.main.mediaurlbase=/luci-static/bootstrap-dark
+#uci set luci.main.mediaurlbase=/luci-static/argon
+uci set luci.main.mediaurlbase=/luci-static/material
+uci set argon.@global[0].mode='dark'
+uci set argon.@global[0].bing_background='1'
+uci commit luci
+#
+# > SCREEN SETTINGS
+#
+cat >> /etc/screenrc << EOF
+defscrollback 1000
+termcapinfo xterm ti@:te@
+hardstatus alwayslastline '%{= kG}[ %{G}%H %{g}][%= %{= kw}%?%-Lw%?%{r}(%{W}%n*%f%t%?(%u)%?%{r})%{w}%?%+Lw%?%?%= %{g}][%{B} %d/%m %{W}%c %{g}]'
+vbell off
+EOF
+#
+# > PROMPT COLORS
+#
+sed -i 's/^export PS1.*/export PS1='\''\\\[\\033\[01;31m\\\]\\h\\\[\\033\[01;30m\\\]@\\\[\\033\[01;32m\\\]\\w\\\[\\033\[01;34m\\\] #\\\[\\033\[00m\\\] '\''/' /etc/profile
+#
+# > PATH
+#
+export PATH=/usr/lib/OpenWrtScripts:"$PATH"
+#
+# > LINK COMMANDS
+#
+ln -sf /sbin/ip /usr/bin/ip
+#
+# > BASIC SETTINGS
+#
+# hostname, timezone & ntp
+host=$(cat /tmp/sysinfo/model | cut -d" " -f2 | tr '[A-Z]' '[a-z]')
+uci -q batch <<-EOF
+set system.@system[0].hostname=$host
+set system.@system[0].timezone='CET-1CEST-2,M3.5.0/02:00:00,M10.5.0/03:00:00'
+set system.@system[0].zonename='Europe/Madrid'
+delete system.ntp.server
+add_list system.ntp.server='hora.roa.es'
+add_list system.ntp.server='hora.rediris.es'
+add_list system.ntp.server='pulsar.rediris.es'
+add_list system.ntp.server='minuto.roa.es'
+EOF
+uci commit system
+
+# log level
+# 8 debug, 5 warning
+uci set system.@system[0].conloglevel='5'
+# 5 debug, 9 warning
+uci set system.@system[0].cronloglevel='9'
+uci commit system
+
+##############################################################################
+# >>>>>>>>>>>>>>>>>>>>>>>>>> ADVANCED SETTINGS <<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
+##############################################################################
+#
+# SYSCTL OVERWRITE
+#
 SYSCTL_LOCAL=/etc/sysctl.d/50-local.conf
 mkdir -p /etc/sysctl.d
 printf >"$SYSCTL_LOCAL"
@@ -156,29 +128,160 @@ echo kernel.msgmax = 65536 >>"$SYSCTL_LOCAL"
 echo kernel.msgmnb = 65536 >>"$SYSCTL_LOCAL"
 # cierra la partición de intercambio:
 echo vm.swappiness=0 >>"$SYSCTL_LOCAL"
-
-# hsts=1/on/yes: same as --hsts
-# hsts=0/off/no: same as --no-hsts
-# --no-hsts
-#    Wget supports HSTS (HTTP Strict Transport Security, RFC 6797) by default. Use ‘--no-hsts’ to make Wget 
-#    act as a non-HSTS-compliant UA. As a consequence, Wget would ignore all the Strict-Transport-Security 
-#    headers, and would not enforce any existing HSTS policy.
 #
-echo 'hsts=0' > /root/.wgetrc
-
-# packet_steering
-# use every cpu to handle packet traffic
+# PACKET STEERING (use every cpu to handle packet traffic)
+#
 #uci set network.globals.packet_steering='1'
 #uci commit network
 #/etc/init.d/network restart
 
-#uci -q set base_config.@status[0].version="$version"
-#uci commit base_config
+##############################################################################
+# >>>>>>>>>>>>>>>>>>>>>>>>>>> BASIC SERVICES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
+##############################################################################
+#
+# > ACME
+#
+# acme installation fix: https://wiki.terrabase.info/wiki/LetsEncrypt_with_ACME_on_OpenWRT
+# change YourEmail@YourProvider.com to your account email
+#mv /usr/lib/acme /usr/lib/acme.OPKG
+#mkdir /usr/lib/acme
+#cp /usr/lib/acme.OPKG/run-acme /usr/lib/acme/
+#/usr/lib/acme.OPKG/acme.sh --install --home /usr/lib/acme --cert-home /etc/acme/certs --config-home /etc/acme/config --accountemail YourEmail@YourProvider.com --accountkey /etc/acme/account --useragent "" --log /var/log/acme.log
+cat >> /etc/profile << EOF
+export LE_WORKING_DIR="/usr/lib/acme"
+export LE_CONFIG_HOME="/etc/acme/config"
+alias acme.sh="/usr/lib/acme/acme.sh --config-home '/etc/acme/config'"
+EOF
+#
+# > AUTOMOUNT
+#
+uci set fstab.@global[0].anon_mount=1
+uci commit fstab
+#
+# > uPNP
+#
+# Create file to stop: daemon.err miniupnpd[8591]: could not open lease file: /var/upnp.leases
+miniupnpd=/var/upnp.leases
+touch $miniupnpd
 
-# luci cache
+uci -q set upnpd.config.enabled='1'
+uci commit upnpd
+#
+# > HTTPD
+#
+echo "$(uci -q get uhttpd.main.index_page)" | grep -q "cgi-bin/luci" ||
+	uci -q add_list uhttpd.main.index_page='cgi-bin/luci' && uci commit uhttpd
+#
+# > LUCI CACHE
+#
 rm -rf /tmp/luci-modulecache
 rm -f /tmp/luci-indexcache*
 rm -rf /tmp/luci-*
+#
+# > WIRELESS ENABLED BY DEFAULT
+#
+# after downloading the firmware, the wireless is turned off by default
+# ref: https://forum.openwrt.org/t/solved-enable-wi-fi-and-connect-to-a-network-on-first-boot/47399/24
+#sed -i '/option disabled/d' /etc/config/wireless
+# wifi off: set wireless.radio${devidx}.disabled=1
+# wifi on: set wireless.radio${devidx}.disabled=0
+#sed -i 's/set wireless.radio${devidx}.disabled=1/set wireless.radio${devidx}.disabled=0/g' /lib/wifi/mac80211.sh
+#wifi up
+#
+# > HSTS
+#
+# hsts=1/on/yes: same as --hsts
+# hsts=0/off/no: same as --no-hsts
+# --no-hsts
+#    Wget supports HSTS (HTTP Strict Transport Security, RFC 6797) by default. Use ‘--no-hsts’ to make Wget
+#    act as a non-HSTS-compliant UA. As a consequence, Wget would ignore all the Strict-Transport-Security
+#    headers, and would not enforce any existing HSTS policy.
+#
+echo 'hsts=0' > /root/.wgetrc
+
+##############################################################################
+# >>>>>>>>>>>>>>>>>>>>>>>>> ADVANCED SERVICES <<<<<<<<<<<<<<<<<<<<<<<<<<<<<< #
+##############################################################################
+#
+# > DNS
+#
+if [ "$(uci -q get dhcp.@dnsmasq[0].port)" != "53" ]; then
+	uci -q set dhcp.@dnsmasq[0].port='53'
+	uci commit dhcp
+fi
+uci -q set dhcp.@dnsmasq[0].cachesize="$cachesize"
+uci -q set dhcp.@dnsmasq[0].dnsforwardmax="$dnsforwardmax"
+uci commit dhcp
+#
+# > SQM
+#
+WAN_IFACE=`uci get network.wan.device`
+
+if [ $SQM = "pie" ]; then
+	uci -q batch <<-EOF
+	set sqm.eth1.interface="$WAN_IFACE"
+	set sqm.eth1.debug_logging='0'
+	set sqm.eth1.verbosity='5'
+	set sqm.eth1.qdisc_advanced='1'
+	set sqm.eth1.squash_ingress='0'
+	set sqm.eth1.squash_dscp='0'
+	set sqm.eth1.ingress_ecn='ECN'
+	set sqm.eth1.linklayer='ethernet'
+	set sqm.eth1.overhead='18'
+	set sqm.eth1.enabled='1'
+	set sqm.eth1.qdisc='pie'
+	set sqm.eth1.linklayer_advanced='1'
+	set sqm.eth1.tcMTU='1518'
+	set sqm.eth1.tcTSIZE='95'
+	set sqm.eth1.tcMPU='64'
+	set sqm.eth1.script='layer_cake.qos'
+	set sqm.eth1.qdisc_really_really_advanced='1'
+	set sqm.eth1.itarget='15ms'
+	set sqm.eth1.etarget='15ms'
+	set sqm.eth1.linklayer_adaptation_mechanism='cake'
+	set sqm.eth1.egress_ecn='ECN'
+	set sqm.eth1.iqdisc_opts='mpu 64 dual-dsthost'
+	set sqm.eth1.eqdisc_opts='mpu 64 dual-srchost'
+	# set sqm.eth1.download=''										# Set by autoSQM
+	# set sqm.eth1.upload=''										# Set by autoSQM
+	EOF
+fi # End of Pie
+
+if [ $SQM = "cake" ]; then
+	uci -q batch <<-EOF
+	set sqm.eth1.interface="$WAN_IFACE"
+	set sqm.eth1.debug_logging='0'
+	set sqm.eth1.verbosity='5'
+	set sqm.eth1.qdisc='cake'
+	set sqm.eth1.qdisc_advanced='1'
+	set sqm.eth1.squash_ingress='0'
+	set sqm.eth1.squash_dscp='0'
+	set sqm.eth1.ingress_ecn='ECN'
+	set sqm.eth1.linklayer='ethernet'
+	set sqm.eth1.linklayer_advanced='1'
+	set sqm.eth1.tcMPU='64'
+	set sqm.eth1.egress_ecn='NOECN'
+	set sqm.eth1.qdisc_really_really_advanced='1'
+	set sqm.eth1.eqdisc_opts='nat dual-srchost'
+	set sqm.eth1.linklayer_adaptation_mechanism='cake'
+	set sqm.eth1.ilimit='64'
+	set sqm.eth1.elimit='64'
+	set sqm.eth1.iqdisc_opts='nat dual-dsthost ingress'
+	set sqm.eth1.overhead='18'
+	set sqm.eth1.tcMTU='1518'
+	set sqm.eth1.tcTSIZE='95'
+	set sqm.eth1.enabled='1'
+	# set sqm.eth1.download=''							# Set by autoSQM
+	# set sqm.eth1.upload=''							# Set by autoSQM
+	set sqm.eth1.script='piece_of_cake.qos'
+	EOF
+fi # End of Cake
+
+uci commit sqm
+/etc/init.d/sqm reload
+
+echo "0 6,14,22 * * * /usr/lib/OpenWrtScripts/autoSQM.sh" >> /etc/crontabs/root
+crontab /etc/crontabs/root
 
 ##############################################################################
 # >>>>>>>>>>>>>>>>>>>>>>>  H  A  R  D  E  N  I  N  G <<<<<<<<<<<<<<<<<<<<<<< #
@@ -188,8 +291,7 @@ rm -rf /tmp/luci-*
 #
 uci set dropbear.@dropbear[0].Interface='lan'
 uci commit dropbear
-service dropbear restart 
-# -- END --
+service dropbear restart
 #
 # > Ensure that we use/redirect to HTTPS always
 #
@@ -197,21 +299,19 @@ uci set uhttpd.main.redirect_https='1'
 uci commit uhttpd
 service uhttpd restart
 service uhttpd enable
-# -- END --
 #
 # > BCP38: http://www.bcp38.info/index.php/Main_Page
 #
-# This is less about protecting your router and more about preventing your network's 
+# This is less about protecting your router and more about preventing your network's
 # contribution to some types of DoS/DDoS attack
 uci set bcp38.@bcp38[0].enabled='1'
 uci set bcp38.@bcp38[0].interface=$WAN_IFACE #Adjust to match your WAN port - may be something like eth0.2 for example.
-uci commit bcp38 
+uci commit bcp38
 
 service bcp38 restart
 service bcp38 enable
-# -- END --
 #
-# > BanIP: https://github.com/openwrt/packages/blob/master/net/banip/files/README.md
+# > BANIP: https://github.com/openwrt/packages/blob/master/net/banip/files/README.md
 #
 uci set banip.global.ban_enabled='1'
 uci set banip.global.ban_trigger='wan'
@@ -275,9 +375,8 @@ service banip enable
 # refreshing the blocklists every 24 hours
 echo "15 07 * * * /etc/init.d/banip reload" >> /etc/crontabs/root
 crontab /etc/crontabs/root
-# -- END --
 #
-# > adblock
+# > ADBLOCK
 #
 uci set adblock.global.adb_enabled='1'
 uci set adblock.global.adb_trigger='wan'
@@ -327,8 +426,8 @@ service adblock enable
 echo "16 07 * * * /etc/init.d/adblock reload" >> /etc/crontabs/root
 crontab /etc/crontabs/root
 #
-# > Firewall DROP external connections
-# 
+# > FIREWALL DROP EXTERNAL CONNECTIONS
+#
 if [ $(uci get firewall.@zone[0].name) = 'wan' ]; then zona=0
 elif [ $(uci get firewall.@zone[-1].name) = 'wan' ]; then zona=-1
 elif [ $(uci get firewall.@zone[-2].name) = 'wan' ]; then zona=-2
@@ -338,6 +437,16 @@ uci set firewall.@zone[$zona].input='DROP'
 uci set firewall.@zone[$zona].forward='DROP'
 uci commit firewall
 service firewall restart
-# -- END --
+
+#
+#
+#
+
+#uci -q set base_config.@status[0].version="$version"
+#uci commit base_config
+
+#mkdir -p /etc/backup
+#[ -e "/etc/backup/installed_packages.txt" ] || /usr/lib/OpenWrtScripts/opkgscript.sh write /etc/backup/installed_packages.txt
+#[ -e "/etc/backup/backup.tar.gz" ] || /sbin/sysupgrade -b /etc/backup/backup.tar.gz
 
 exit 0
